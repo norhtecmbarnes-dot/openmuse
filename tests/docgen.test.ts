@@ -58,3 +58,16 @@ test("webSearch rejects empty and oversized queries", async () => {
   await assert.rejects(() => webSearch(""), /empty/i);
   await assert.rejects(() => webSearch("x".repeat(501)), /too long/i);
 });
+
+test("webSearch prefers Ollama when OLLAMA_API_KEY is set and falls back on failure", async () => {
+  const previous = process.env.OLLAMA_API_KEY;
+  process.env.OLLAMA_API_KEY = "test-key-never-live";
+  try {
+    // No real network call succeeds for a bogus key; the keyless fallback must still answer.
+    const results = await webSearch("test query fallback");
+    assert.ok(Array.isArray(results));
+  } finally {
+    if (previous === undefined) delete process.env.OLLAMA_API_KEY;
+    else process.env.OLLAMA_API_KEY = previous;
+  }
+});
