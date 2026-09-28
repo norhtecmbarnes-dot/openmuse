@@ -3,6 +3,8 @@ import { test } from "node:test";
 import {
   assertApiDeploymentConfig,
   type Config,
+  DEFAULT_MODEL_TIMEOUT_MS,
+  positiveInt,
   shadowedEnvKeys,
 } from "../apps/server/src/config.ts";
 
@@ -56,4 +58,23 @@ test("environment variables that override a different .env value are reported by
   const env = { OPENAI_API_KEY: "sk-proj-system", MODEL: "openai/gpt-5", EMPTY: "set" };
   assert.deepEqual(shadowedEnvKeys(file, env), ["OPENAI_API_KEY", "EMPTY"]);
   assert.deepEqual(shadowedEnvKeys(file, {}), []);
+});
+
+test("positiveInt accepts a positive number and floors it", () => {
+  assert.equal(positiveInt("X", 100, "2500"), 2500);
+  assert.equal(positiveInt("X", 100, "2500.9"), 2500);
+});
+
+test("positiveInt falls back for missing, blank, zero, negative or non-numeric values", () => {
+  assert.equal(positiveInt("X", DEFAULT_MODEL_TIMEOUT_MS, undefined), DEFAULT_MODEL_TIMEOUT_MS);
+  assert.equal(positiveInt("X", 100, ""), 100);
+  assert.equal(positiveInt("X", 100, "   "), 100);
+  assert.equal(positiveInt("X", 100, "0"), 100);
+  assert.equal(positiveInt("X", 100, "-5"), 100);
+  assert.equal(positiveInt("X", 100, "abc"), 100);
+  assert.equal(positiveInt("X", 100, "Infinity"), 100);
+});
+
+test("the default model timeout is longer than the old five-minute cap", () => {
+  assert.ok(DEFAULT_MODEL_TIMEOUT_MS > 5 * 60 * 1000);
 });

@@ -6,6 +6,7 @@ import { z } from "zod";
 import type { AgentTask } from "../../../../packages/domain/src/agent.ts";
 import { emailDraftSchema, eventDraftSchema } from "../../../../packages/domain/src/index.ts";
 import { computerInstructions, computerTools } from "../computer-tools.ts";
+import { DEFAULT_MODEL_TIMEOUT_MS } from "../config.ts";
 import type { AgentService } from "./service.ts";
 import { tanstackAgent } from "./tanstack-agent.ts";
 import type { TaskContext } from "./worker.ts";
@@ -304,11 +305,17 @@ export async function executeModelTask(
   };
   let text = "";
   let runError: string | undefined;
+  const timeoutMs = config.modelTimeoutMs ?? DEFAULT_MODEL_TIMEOUT_MS;
   await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => {
       agent.abortRun();
-      reject(new Error("Model run timed out after five minutes"));
-    }, 300000);
+      reject(
+        new Error(
+          `Model run timed out after ${Math.round(timeoutMs / 60000)} minute(s). ` +
+            "Raise MODEL_TIMEOUT_MS on the server for slower local models.",
+        ),
+      );
+    }, timeoutMs);
     const abort = () => {
       clearTimeout(timeout);
       agent.abortRun();

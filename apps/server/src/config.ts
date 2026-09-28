@@ -46,6 +46,7 @@ export interface Config {
   workerUrl?: string;
   workerToken?: string;
   taskWorkerEnabled?: boolean;
+  modelTimeoutMs?: number;
   computerEnabled?: boolean;
   computerImage?: string;
   computerDeploymentId?: string;
@@ -81,6 +82,17 @@ export function assertApiDeploymentConfig(
 // writes never re-fire here: they are dispatched outside the model loop through
 // reviewed, idempotency-keyed actions.
 export const MODEL_MAX_RETRIES = 2;
+
+/** A durable model run has to be long enough for slow local models; 5 minutes was too short. */
+export const DEFAULT_MODEL_TIMEOUT_MS = 20 * 60 * 1000;
+
+export function positiveInt(name: string, fallback: number, value = process.env[name]): number {
+  if (value === undefined || !value.trim()) return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.floor(parsed);
+}
+
 export function readConfig(): Config {
   const mode = process.env.WORKSPACE_MODE ?? "sample";
   if (mode !== "sample" && mode !== "live")
@@ -112,6 +124,7 @@ export function readConfig(): Config {
     workerUrl: process.env.BROWSER_WORKER_URL,
     workerToken: process.env.WORKER_TOKEN,
     taskWorkerEnabled: process.env.TASK_WORKER_ENABLED !== "false",
+    modelTimeoutMs: positiveInt("MODEL_TIMEOUT_MS", DEFAULT_MODEL_TIMEOUT_MS),
     computerEnabled: process.env.COMPUTER_ENABLED === "true",
     computerImage: process.env.COMPUTER_IMAGE ?? "openmuse-computer:local",
     computerDeploymentId: process.env.COMPUTER_DEPLOYMENT_ID,
