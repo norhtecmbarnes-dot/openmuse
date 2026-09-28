@@ -10,17 +10,27 @@ import { useWorkspace } from "./workspace";
 
 export function FileThreadCard({ file }: { file: Artifact }) {
   const { open } = useWorkspace();
+  const isPdf = (file.mimeType || "application/pdf") === "application/pdf";
+  const label = file.mimeType?.includes("wordprocessingml")
+    ? "Word document"
+    : file.mimeType?.includes("presentationml")
+      ? "PowerPoint presentation"
+      : file.mimeType?.includes("spreadsheetml")
+        ? "Spreadsheet"
+        : "PDF";
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Open PDF: ${file.name}`}
+      accessibilityLabel={`Open file: ${file.name}`}
       onPress={() => open({ type: "file", file })}
       style={{ width: "100%", maxWidth: 440 }}
     >
       <Card style={{ padding: 18, backgroundColor: "#F0F1F2", gap: 18 }}>
         <View style={{ borderRadius: 12, padding: 22, backgroundColor: "#FFF", gap: 14 }}>
-          <Text style={[s.heading, { fontSize: 18 }]}>{file.name.replace(/\.pdf$/i, "")}</Text>
-          {file.fields?.length ? (
+          <Text style={[s.heading, { fontSize: 18 }]}>
+            {file.name.replace(/\.(pdf|docx|pptx)$/i, "")}
+          </Text>
+          {isPdf && file.fields?.length ? (
             file.fields.slice(0, 4).map((field) => (
               <View
                 key={field.name}
@@ -39,7 +49,9 @@ export function FileThreadCard({ file }: { file: Artifact }) {
             ))
           ) : (
             <Text style={s.muted}>
-              {file.pageCount} {file.pageCount === 1 ? "page" : "pages"} · Tap to read the document
+              {isPdf
+                ? `${file.pageCount} ${file.pageCount === 1 ? "page" : "pages"} · Tap to read the document`
+                : "Tap to open, share or attach this document"}
             </Text>
           )}
         </View>
@@ -51,7 +63,7 @@ export function FileThreadCard({ file }: { file: Artifact }) {
             <Text numberOfLines={2} style={s.heading}>
               {file.name}
             </Text>
-            <Text style={s.muted}>PDF</Text>
+            <Text style={s.muted}>{label}</Text>
           </View>
           <ChevronRight size={18} color={colors.muted} />
         </View>

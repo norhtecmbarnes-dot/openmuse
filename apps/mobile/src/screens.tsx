@@ -923,6 +923,13 @@ export function BrowserScreen() {
     </View>
   );
 }
+const labelFor = (mimeType?: string) => {
+  if (mimeType?.includes("wordprocessingml")) return "DOCX";
+  if (mimeType?.includes("presentationml")) return "PPTX";
+  if (mimeType?.includes("spreadsheetml")) return "XLSX";
+  return "PDF";
+};
+
 export function FilesScreen() {
   const { workspace: w, api, refresh, open } = useWorkspace();
   const [busy, setBusy] = useState(false);
@@ -1022,7 +1029,7 @@ export function FilesScreen() {
                   ))}
                 </View>
                 <View style={{ position: "absolute", bottom: 12, right: 14 }}>
-                  <Chip>PDF</Chip>
+                  <Chip>{labelFor(f.mimeType)}</Chip>
                 </View>
               </View>
               <View style={{ padding: 21, gap: 6 }}>
@@ -1030,7 +1037,9 @@ export function FilesScreen() {
                   {f.name}
                 </Text>
                 <Text style={s.small}>
-                  {f.pageCount} {f.pageCount === 1 ? "page" : "pages"} ·{" "}
+                  {(f.mimeType || "application/pdf") === "application/pdf"
+                    ? `${f.pageCount} ${f.pageCount === 1 ? "page" : "pages"} · `
+                    : ""}
                   {Math.max(1, Math.round(f.size / 1024))} KB
                 </Text>
                 <View style={[s.between, { marginTop: 9 }]}>

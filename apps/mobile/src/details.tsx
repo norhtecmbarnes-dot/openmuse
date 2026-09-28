@@ -769,25 +769,34 @@ function FileDetail({ file: f }: { file: Artifact }) {
         await Linking.openURL(url);
         return;
       }
-      const target = `${FileSystem.cacheDirectory}${f.id}.pdf`;
+      const target = `${FileSystem.cacheDirectory}${f.name || `${f.id}.pdf`}`;
       await FileSystem.downloadAsync(url, target, {
         headers: { Authorization: `Bearer ${api.token}` },
       });
       if (await Sharing.isAvailableAsync())
-        await Sharing.shareAsync(target, { mimeType: "application/pdf", UTI: "com.adobe.pdf" });
+        await Sharing.shareAsync(target, { mimeType: f.mimeType });
       else throw new Error("Sharing is not available on this device.");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
   }
+  const isPdf = (f.mimeType || "application/pdf") === "application/pdf";
   return (
     <Sheet
       title={f.name}
-      subtitle={`${f.pageCount} pages · ${Math.max(1, Math.round(f.size / 1024))} KB · ${f.source}`}
+      subtitle={`${f.mimeType === "application/pdf" ? `${f.pageCount} pages · ` : ""}${Math.max(1, Math.round(f.size / 1024))} KB · ${f.source}`}
       onClose={close}
       wide
     >
-      <PdfReader url={url} token={api.token} pageCount={f.pageCount} />
+      {isPdf && <PdfReader url={url} token={api.token} pageCount={f.pageCount} />}
+      {!isPdf && (
+        <Card>
+          <Text style={s.muted}>
+            This document was created by your agent. Open or share it below — Word and PowerPoint
+            files open in their own apps.
+          </Text>
+        </Card>
+      )}
       <View style={[s.row, { gap: 10, marginVertical: 18, flexWrap: "wrap" }]}>
         <Button icon={Download} onPress={() => void share()}>
           {Platform.OS === "web" ? "Open / download" : "Save or share"}
@@ -799,7 +808,7 @@ function FileDetail({ file: f }: { file: Artifact }) {
           Attach to email
         </Button>
       </View>
-      {f.fields && f.fields.length > 0 && (
+      {isPdf && f.fields && f.fields.length > 0 && (
         <Card>
           <SectionHeading title="Fill this form" />
           <Text style={[s.muted, { marginBottom: 18 }]}>
