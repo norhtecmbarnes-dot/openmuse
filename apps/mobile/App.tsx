@@ -301,7 +301,7 @@ function WorkspaceShell({
               marginHorizontal: 20,
             }}
           >
-            <View style={{ position: "absolute", left: 0, top: 16 }}>
+            <View style={{ position: "absolute", left: 0, top: 16, zIndex: 2 }}>
               <IconButton
                 icon={Menu}
                 label="Open conversations and menu"
@@ -339,7 +339,7 @@ function WorkspaceShell({
               </Pressable>
               {section === "chat" && <ComputerEntry />}
             </View>
-            <View style={{ position: "absolute", right: 0, top: 16 }}>
+            <View style={{ position: "absolute", right: 0, top: 16, zIndex: 2 }}>
               <IconButton
                 icon={Bell}
                 label={`Notifications, ${pending} unread or pending`}
