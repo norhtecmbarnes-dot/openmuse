@@ -14,9 +14,10 @@ export async function modelFixture(
     dropAfterStart?: (index: number) => boolean;
     dropAfterText?: (index: number) => boolean;
     errorPart?: (index: number) => boolean;
+    replyText?: (index: number) => string | undefined;
   } = {},
 ) {
-  const { errorStatus, dropAfterStart, dropAfterText, errorPart } = options;
+  const { errorStatus, dropAfterStart, dropAfterText, errorPart, replyText } = options;
   const requests: { path: string; body: string }[] = [];
   const server = createServer(async (request, response) => {
     let body = "";
@@ -104,12 +105,37 @@ export async function modelFixture(
       response.end("data: [DONE]\n\n");
       return;
     }
-    const call = await reply(index);
+    const text = replyText?.(index);
+    const call = text === undefined ? await reply(index) : undefined;
     response.writeHead(200, { "Content-Type": "text/event-stream" });
     const emit = (type: string, value: object) =>
       response.write(`data: ${JSON.stringify({ type, ...value })}\n\n`);
     const base = { id: `response-${index}`, created_at: 1000, model: "fixture" };
     emit("response.created", { response: { ...base, status: "in_progress" } });
+    if (text !== undefined) {
+      const message = {
+        id: `msg-${index}`,
+        type: "message",
+        status: "completed",
+        role: "assistant",
+        content: [{ type: "output_text", text, annotations: [] }],
+      };
+      emit("response.output_item.added", {
+        output_index: 0,
+        item: { ...message, status: "in_progress", content: [] },
+      });
+      emit("response.output_text.delta", {
+        item_id: message.id,
+        output_index: 0,
+        delta: text,
+      });
+      emit("response.output_item.done", { output_index: 0, item: message });
+      emit("response.completed", {
+        response: { ...base, status: "completed", output: [message], usage: undefined },
+      });
+      response.end("data: [DONE]\n\n");
+      return;
+    }
     const item = call && {
       id: `item-${index}`,
       type: "function_call",

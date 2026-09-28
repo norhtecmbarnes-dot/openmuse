@@ -117,6 +117,56 @@ test("CopilotKit model worker executes server tools and persists the confirmed o
   }
 });
 
+test("a text reply after saving an artifact finishes the task", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "openmuse-model-finish-"));
+  const db = await createStore();
+  await modelFixture(
+    t,
+    (index) =>
+      index === 0
+        ? {
+            name: "save_artifact",
+            arguments: {
+              kind: "report",
+              title: "HN research",
+              summary: "Top 5 stories",
+              data: { stories: ["one", "two"] },
+            },
+          }
+        : undefined,
+    {
+      replyText: (index) =>
+        index === 0
+          ? undefined
+          : "Saved the report with the top five Hacker News stories and their links.",
+    },
+  );
+  const server = await createApp(db, {
+    mode: "sample",
+    port: 8787,
+    host: "127.0.0.1",
+    publicUrl: "http://localhost:8787",
+    dataDir: directory,
+    agentBackend: "model",
+    intelligenceApiKey: "test-project-key-never-sent",
+    model: "openai/fixture",
+    googleRedirectUri: "http://localhost:8787/api/google/callback",
+    allowedOrigins: [],
+  });
+  try {
+    const task = await server.agent.createTask("owner", { prompt: "Research Hacker News" });
+    await server.agent.worker.tick();
+    const result = await server.agent.detail("owner", task.id);
+    assert.equal(result.task.status, "succeeded", result.task.error ?? result.task.question);
+    assert.match(String(result.task.result), /Saved the report/);
+    assert.ok(result.artifacts.some((a) => a.title === "HN research"));
+  } finally {
+    await server.agent.stop();
+    await db.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("the model worker keeps the text a model replies with when it calls no tool", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "openmuse-model-text-"));
   const db = await createStore();
